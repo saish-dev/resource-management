@@ -14,7 +14,7 @@ Status legend: [ ] todo · [~] in progress · [x] done
 - [x] ESLint/Prettier/TS strict, Husky, commit lint
 - [x] Docker Compose infra (Postgres, Redis) and `.env.example`
 - [x] Dockerfiles + `api`/`web` compose services (dev and prod images verified; `migrate` service added with Prisma)
-- [ ] CI (lint, typecheck, test, build)
+- [~] CI (lint, typecheck, test, build, migrations, docker): workflow written, not yet run on GitHub
 - [x] Prisma setup, first migration, seed from prototype data
 - [ ] Port design tokens (light/dark) and base components (Button, Lozenge, Card, Table, Modal, Toast, Tag, Progress bar)
 - [ ] Confirm open decisions: ORM, auth/IdP, hosting, UI library
