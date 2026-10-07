@@ -68,6 +68,6 @@ pnpm --filter api prisma migrate dev
 
 ## Git
 
-- Branch off `main`; Conventional Commits (enforced by commitlint).
+- Always branch off an up-to-date `main` (never off another feature branch), and only after the previous feature is merged to `main`. If earlier work is unmerged, stop and ask to merge it first. Conventional Commits (enforced by commitlint).
 - Commit automatically when a task or logical unit is done and checks pass; don't ask. Never commit to `main` directly, on a feature branch only.
 - Merging to `main`, pushing, opening PRs and force operations still need the user's request.
