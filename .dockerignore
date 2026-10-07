@@ -10,3 +10,4 @@ node_modules
 resource_management_v2.html
 docs
 .claude
+apps/api/src/generated
