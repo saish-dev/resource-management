@@ -6,7 +6,7 @@ Status legend: [ ] todo · [~] in progress · [x] done
 
 - [x] Clickable prototype (`resource_management_v2.html`)
 - [x] Project docs (this folder)
-- [~] Repo scaffold (monorepo done; lint/CI/Prisma pending)
+- [x] Repo scaffold (monorepo, tooling, Prisma, Docker, CI workflow, design tokens)
 
 ## Phase 0 — Foundations
 
@@ -17,7 +17,7 @@ Status legend: [ ] todo · [~] in progress · [x] done
 - [~] CI (lint, typecheck, test, build, migrations, docker): workflow written, not yet run on GitHub
 - [x] Prisma setup, first migration, seed from prototype data
 - [x] Port design tokens (light/dark) and base components (Button, Lozenge, Card, Table, Modal, Toast, Tag, Progress bar); dev gallery at `/design`
-- [ ] Confirm open decisions: ORM, auth/IdP, hosting, UI library
+- [~] Confirm open decisions: ORM (Prisma, confirmed), auth/IdP (Microsoft + Google OIDC, confirmed), UI library (Tailwind + native elements, in use); **hosting still open, needs a decision**
 
 ## Phase 1 — Core domain (MVP)
 
