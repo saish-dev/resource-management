@@ -1,0 +1,12 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+resource_management_v2.html
+docs
+.claude

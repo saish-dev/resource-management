@@ -1,5 +1,10 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
-const nextConfig: NextConfig = {/* config options here */};
+const nextConfig: NextConfig = {
+  output: 'standalone',
+  // Monorepo: trace files from the repo root so packages/shared is included.
+  outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
+};
 
 export default nextConfig;
