@@ -11,6 +11,7 @@ Pick the mode that matches the request.
 
 ## 1. Create a branch
 
+0. Only start when previous feature branches are merged to `main`; if any are unmerged, tell the user and offer to merge them first. Never branch off a feature branch.
 1. `git status` and `git branch --show-current`. If there are uncommitted changes, tell the user and ask whether to carry them over.
 2. `git fetch origin && git switch main && git pull --ff-only`, then `git switch -c <name>`.
 3. Name: `<type>/<task-id>-<short-kebab-slug>`, e.g. `feat/t12-allocate-board`, `fix/lock-overlap-check`. Type is a Conventional Commit type (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`). Use the id from `docs/TASK_BREAKDOWN.md` when there is one.

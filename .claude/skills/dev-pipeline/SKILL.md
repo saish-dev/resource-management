@@ -11,6 +11,8 @@ Run the stages in order. Skip a stage only if clearly not applicable, and say wh
 
 ## 0. Intake
 
+- Branch from an up-to-date `main` only (see `/git-pr-workflow`); if earlier feature branches are unmerged, stop and ask to merge them first.
+
 - Read `CLAUDE.md`, then the sections of `PRODUCT_REQUIREMENTS.md`, `API_DESIGN.md`, `DATABASE_DESIGN.md` relevant to the task.
 - State the task, acceptance criteria (from the PRD), and which phase/milestone it belongs to.
 - If scaffold is missing (no `apps/`), the task is Phase 0: set up the monorepo first, then `/docker-local` for the Dockerfiles and compose services.
