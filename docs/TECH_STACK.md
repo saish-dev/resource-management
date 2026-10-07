@@ -22,7 +22,7 @@ Decided: **Next.js** frontend, **NestJS** backend. Items marked _(proposed)_ are
 | Framework       | NestJS, TypeScript (strict)                                                                                                                                           |
 | API style       | REST + OpenAPI (`@nestjs/swagger`)                                                                                                                                    |
 | Validation      | `class-validator`/`class-transformer` DTOs, or Zod pipe _(pick one; prefer Zod to share with FE)_                                                                     |
-| ORM             | Prisma _(proposed)_ (alternative: TypeORM)                                                                                                                            |
+| ORM             | Prisma 7 with `@prisma/adapter-pg`; client generated to `apps/api/src/generated` (git-ignored)                                                                        |
 | Database        | PostgreSQL                                                                                                                                                            |
 | Auth            | OIDC via Passport (`passport-azure-ad`/`openid-client` for Microsoft, `passport-google-oauth20` or `openid-client` for Google), session cookie, RBAC guards (5 roles) |
 | Jobs/scheduling | `@nestjs/schedule` + BullMQ/Redis _(proposed)_ for lock expiry, bench counter, digests                                                                                |

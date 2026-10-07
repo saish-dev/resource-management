@@ -1,10 +1,10 @@
 # Database Design (PostgreSQL)
 
-Proposed schema, derived from prototype data shapes. Types are Postgres; names snake_case. IDs are UUIDs unless noted.
+Implemented in `apps/api/prisma/schema.prisma` (Prisma 7, Postgres 16) with raw-SQL rules in `apps/api/prisma/migrations`. Derived from prototype data shapes. Types are Postgres; names snake_case. IDs are UUIDs unless noted.
 
 ## Enums
 
-- `person_status`: AVAILABLE, ALLOCATED, LOCKED_TENTATIVE, LOCKED_CONFIRMED, ON_LEAVE, BENCH _(mostly derived; see notes)_
+- `person_status`: AVAILABLE, ALLOCATED, LOCKED_TENTATIVE, LOCKED_CONFIRMED, ON_LEAVE, BENCH _(derived, **not** a DB enum; Zod enum in `packages/shared`)_
 - `lock_type`: TENTATIVE, CONFIRMED
 - `priority`: HIGH, MEDIUM, LOW
 - `project_phase`: PIPELINE, MOBILISING, IN_FLIGHT, CLOSING
@@ -13,12 +13,15 @@ Proposed schema, derived from prototype data shapes. Types are Postgres; names s
 - `skill_claim_status`: PENDING, VERIFIED, DECLINED
 - `release_type`: IMMEDIATE, PLANNED
 - `app_role`: ADMIN, RESOURCE_MANAGER, DELIVERY_MANAGER, PRACTICE_LEAD, EMPLOYEE
+- `auth_provider`: MICROSOFT, GOOGLE
+- `notification_channel`: IN_APP, EMAIL, BOTH
+- `notification_frequency`: IMMEDIATE, DAILY, WEEKLY
 
 ## Tables
 
 ### `users`
 
-`id`, `email` (unique), `name`, `role app_role`, `person_id` → people (nullable), `created_at`
+`id`, `email` (unique), `name`, `role app_role`, `person_id` → people (nullable, unique: one user per person), `created_at`
 
 ### `user_identities`
 
@@ -42,7 +45,7 @@ Proposed schema, derived from prototype data shapes. Types are Postgres; names s
 
 ### `projects`
 
-`id`, `code` (unique, e.g. P-101), `name`, `client`, `priority`, `phase`, `start_date`, `end_date`, `lead_id` → people/users, `effort_hours`, `effort_used_hours`, `billable_pct`, `closed_at`
+`id`, `code` (unique, e.g. P-101), `name`, `client`, `priority`, `phase`, `start_date`, `end_date`, `lead_id` → people (nullable), `lead_name` (display name until the lead is linked to a person; the prototype leads are not people), `effort_hours`, `effort_used_hours`, `billable_pct`, `closed_at`
 
 ### `project_skills`
 
@@ -50,13 +53,13 @@ Proposed schema, derived from prototype data shapes. Types are Postgres; names s
 
 ### `demand_lines`
 
-`id`, `project_id`, `role_title`, `skills text[]` or via `demand_line_skills`, `headcount_needed int ≥1`, `start_date`, `end_date`. _Filled_ = count of allocations linked via `demand_line_id` (derived).
+`id`, `project_id`, `role_title`, skills via `demand_line_skills` (`demand_line_id`, `skill_id`), `headcount_needed int ≥1`, `start_date`, `end_date`. _Filled_ = count of allocations linked via `demand_line_id` (derived).
 
 ### `allocations`
 
-`id`, `person_id`, `project_id`, `demand_line_id` (nullable), `pct int CHECK 1..100`, `billable bool`, `start_date`, `end_date`, `released_at`/`release_id`, `created_by`, `created_at`
+`id`, `person_id`, `project_id`, `demand_line_id` (nullable), `pct int CHECK 1..100`, `billable bool`, `start_date`, `end_date`, `released_at` (a `releases` row points back to the allocation), `created_by`, `created_at`
 Indexes: (`person_id`, `start_date`, `end_date`), (`project_id`).
-Constraint: no overlapping rows for same (`person_id`, `project_id`) → exclusion constraint using `daterange`. Sum-of-pct ≤ 100 enforced in service inside a transaction (`SELECT … FOR UPDATE` on person), optionally verified by a deferred trigger.
+Constraints (migration SQL): `pct` 1..100, `end_date >= start_date`, and no overlapping live rows (`released_at IS NULL`) for the same (`person_id`, `project_id`) → `EXCLUDE USING gist` on `daterange(start,end,'[]')` (needs `btree_gist`). `released_at` is set only when a release takes effect: a planned release records a `releases` row and keeps the allocation live (still counted by the overlap constraint) until its effective date. A trigger rejects a `demand_line_id` that belongs to a different project (Prisma cannot model the composite FK without dropping it on the next diff). Sum-of-pct ≤ 100 enforced in service inside a transaction (`SELECT … FOR UPDATE` on person), optionally verified by a deferred trigger.
 
 ### `locks`
 
@@ -76,7 +79,7 @@ Constraint: no overlapping rows for same (`person_id`, `project_id`) → exclusi
 
 ### `notification_rules`
 
-`id`, `event`, `trigger_desc`, `audience text[]`, `enabled`, `channel` (IN_APP | EMAIL | BOTH), `frequency` (IMMEDIATE | DAILY | WEEKLY)
+`id`, `event` (unique), `trigger_desc`, `audience text[]`, `enabled`, `channel` (IN_APP | EMAIL | BOTH), `frequency` (IMMEDIATE | DAILY | WEEKLY)
 
 ### `notifications`
 
@@ -84,15 +87,15 @@ Constraint: no overlapping rows for same (`person_id`, `project_id`) → exclusi
 
 ### `saved_reports`
 
-`id`, `owner_id`, `name`, `type`, `scope jsonb`, `schedule`, `recipients text[]`
+`id`, `owner_id` (nullable = system report), `name`, `type`, `scope jsonb`, `schedule`, `recipients text[]`
 
 ### `settings`
 
-`key` (PK), `value jsonb` — `bench_threshold_days` (14, range 5–60), `skill_mismatch_rule`, etc.
+`key` (PK), `value jsonb` — `bench_threshold_days` (14, range 5–60), `skill_mismatch_rule` (`WARN_ACKNOWLEDGE` default, `HARD_BLOCK`, `WARN_OVERRIDE`), etc.
 
 ### `audit_log`
 
-`id`, `actor_id`, `action`, `entity_type`, `entity_id`, `before jsonb`, `after jsonb`, `reason`, `created_at` (append-only)
+`id`, `actor_id`, `action`, `entity_type`, `entity_id`, `before jsonb`, `after jsonb`, `reason`, `created_at` (append-only: DB triggers reject UPDATE, DELETE and TRUNCATE; a runtime DB role without trigger/ALTER rights is still to do)
 
 ## Relationships
 
@@ -109,4 +112,4 @@ Constraint: no overlapping rows for same (`person_id`, `project_id`) → exclusi
 
 ## Seed data
 
-Port prototype `PEOPLE`, `PROJECTS`, `HOLIDAYS`, `SEED_LEAVE`, `SEED_SKILL_REQS`, `SEED_RULES` into `prisma/seed.ts` (12 named people + generated set for volume).
+`apps/api/prisma/seed.ts` (data in `seed-data.ts`, ported from the prototype). 12 named people + 238 generated with the prototype's LCG (seed 7; `SEED_EXTRA_PEOPLE` changes the count), 5 projects with demand lines, holidays, leave, skill requests, notification rules, saved reports, settings. Demo "today" is 2026-09-08. Idempotent: reference data is upserted by natural key (`hris_id`, project `code`, skill name, rule event); allocations, locks, leave and skill claims of seeded people are replaced. Locks are created for people the prototype shows as locked (tentative expires 2026-10-31, confirmed 2026-11-30). Prototype "filled" counts are linked to allocations by role as far as the data allows; fill is derived, so numbers can differ slightly. Dev only; refuses to run when `NODE_ENV=production`. Run with `pnpm --filter api db:seed`.

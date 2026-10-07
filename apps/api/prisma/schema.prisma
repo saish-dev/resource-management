@@ -1,0 +1,436 @@
+// Mirrors docs/DATABASE_DESIGN.md. DB names are snake_case via @map; ids are UUIDs;
+// dates are plain @db.Date. Status and utilisation are derived, never stored.
+// Raw-SQL rules (CHECKs, no-overlap exclusion) live in the migrations.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LockType {
+  TENTATIVE
+  CONFIRMED
+
+  @@map("lock_type")
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+
+  @@map("priority")
+}
+
+enum ProjectPhase {
+  PIPELINE
+  MOBILISING
+  IN_FLIGHT
+  CLOSING
+
+  @@map("project_phase")
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("leave_status")
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  PARENTAL
+  OTHER
+
+  @@map("leave_type")
+}
+
+enum SkillClaimStatus {
+  PENDING
+  VERIFIED
+  DECLINED
+
+  @@map("skill_claim_status")
+}
+
+enum ReleaseType {
+  IMMEDIATE
+  PLANNED
+
+  @@map("release_type")
+}
+
+enum AppRole {
+  ADMIN
+  RESOURCE_MANAGER
+  DELIVERY_MANAGER
+  PRACTICE_LEAD
+  EMPLOYEE
+
+  @@map("app_role")
+}
+
+enum AuthProvider {
+  MICROSOFT
+  GOOGLE
+
+  @@map("auth_provider")
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  BOTH
+
+  @@map("notification_channel")
+}
+
+enum NotificationFrequency {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+
+  @@map("notification_frequency")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String
+  role      AppRole  @default(EMPLOYEE)
+  personId  String?  @unique @map("person_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  person        Person?        @relation(fields: [personId], references: [id])
+  identities    UserIdentity[]
+  notifications Notification[]
+  savedReports  SavedReport[]
+
+  @@map("users")
+}
+
+model UserIdentity {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  provider    AuthProvider
+  subject     String
+  email       String
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  lastLoginAt DateTime?    @map("last_login_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, subject])
+  @@index([userId])
+  @@map("user_identities")
+}
+
+model Team {
+  id     String   @id @default(uuid()) @db.Uuid
+  name   String   @unique
+  people Person[]
+
+  @@map("teams")
+}
+
+// HRIS-owned fields are read-only in the app: name, roleTitle, band, teamId, location,
+// region, timezone, hoursPerDay, employmentStart, employmentEnd.
+model Person {
+  id              String    @id @default(uuid()) @db.Uuid
+  hrisId          String?   @unique @map("hris_id")
+  name            String
+  roleTitle       String    @map("role_title")
+  band            String    @db.VarChar(2)
+  teamId          String    @map("team_id") @db.Uuid
+  location        String
+  region          String?
+  timezone        String
+  hoursPerDay     Int       @default(8) @map("hours_per_day")
+  employmentStart DateTime? @map("employment_start") @db.Date
+  employmentEnd   DateTime? @map("employment_end") @db.Date
+  verifierId      String?   @map("verifier_id") @db.Uuid
+  benchSince      DateTime? @map("bench_since") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  team           Team           @relation(fields: [teamId], references: [id])
+  verifier       Person?        @relation("Verifier", fields: [verifierId], references: [id])
+  verifies       Person[]       @relation("Verifier")
+  users          User[]
+  skills         PersonSkill[]  @relation("PersonSkillOwner")
+  verifiedSkills PersonSkill[]  @relation("PersonSkillVerifier")
+  allocations    Allocation[]
+  locks          Lock[]
+  leaveRequests  LeaveRequest[] @relation("LeaveOwner")
+  decidedLeave   LeaveRequest[] @relation("LeaveDecider")
+  incomingFor    Release[]      @relation("IncomingPerson")
+  ledProjects    Project[]
+
+  @@index([teamId])
+  @@index([benchSince])
+  @@map("people")
+}
+
+model Skill {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  people      PersonSkill[]
+  projects    ProjectSkill[]
+  demandLines DemandLineSkill[]
+
+  @@map("skills")
+}
+
+// Only VERIFIED rows count in matching.
+model PersonSkill {
+  personId   String           @map("person_id") @db.Uuid
+  skillId    String           @map("skill_id") @db.Uuid
+  status     SkillClaimStatus @default(PENDING)
+  evidence   String?
+  verifiedBy String?          @map("verified_by") @db.Uuid
+  verifiedAt DateTime?        @map("verified_at") @db.Timestamptz()
+
+  person   Person  @relation("PersonSkillOwner", fields: [personId], references: [id], onDelete: Cascade)
+  skill    Skill   @relation(fields: [skillId], references: [id])
+  verifier Person? @relation("PersonSkillVerifier", fields: [verifiedBy], references: [id])
+
+  @@id([personId, skillId])
+  @@index([skillId])
+  @@map("person_skills")
+}
+
+model Project {
+  id              String       @id @default(uuid()) @db.Uuid
+  code            String       @unique
+  name            String
+  client          String
+  priority        Priority
+  phase           ProjectPhase
+  startDate       DateTime     @map("start_date") @db.Date
+  endDate         DateTime     @map("end_date") @db.Date
+  leadId          String?      @map("lead_id") @db.Uuid
+  // Display name until the lead is linked to a person.
+  leadName        String?      @map("lead_name")
+  effortHours     Int          @map("effort_hours")
+  effortUsedHours Int          @default(0) @map("effort_used_hours")
+  billablePct     Int          @map("billable_pct")
+  closedAt        DateTime?    @map("closed_at") @db.Date
+
+  lead        Person?        @relation(fields: [leadId], references: [id])
+  skills      ProjectSkill[]
+  demandLines DemandLine[]
+  allocations Allocation[]
+  locks       Lock[]
+
+  @@map("projects")
+}
+
+model ProjectSkill {
+  projectId String @map("project_id") @db.Uuid
+  skillId   String @map("skill_id") @db.Uuid
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id])
+
+  @@id([projectId, skillId])
+  @@map("project_skills")
+}
+
+// "Filled" is derived: count of allocations linked via demand_line_id.
+model DemandLine {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  roleTitle       String   @map("role_title")
+  headcountNeeded Int      @map("headcount_needed")
+  startDate       DateTime @map("start_date") @db.Date
+  endDate         DateTime @map("end_date") @db.Date
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skills      DemandLineSkill[]
+  allocations Allocation[]
+
+  // Target of the composite FK that keeps allocations on the demand line's own project.
+  @@unique([id, projectId])
+  @@index([projectId])
+  @@map("demand_lines")
+}
+
+model DemandLineSkill {
+  demandLineId String @map("demand_line_id") @db.Uuid
+  skillId      String @map("skill_id") @db.Uuid
+
+  demandLine DemandLine @relation(fields: [demandLineId], references: [id], onDelete: Cascade)
+  skill      Skill      @relation(fields: [skillId], references: [id])
+
+  @@id([demandLineId, skillId])
+  @@map("demand_line_skills")
+}
+
+// pct 1..100 and no overlap per (person, project) are enforced in the migration SQL.
+// The sum of pct per person <= 100 is enforced by the allocations validator in a transaction.
+model Allocation {
+  id           String    @id @default(uuid()) @db.Uuid
+  personId     String    @map("person_id") @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  demandLineId String?   @map("demand_line_id") @db.Uuid
+  pct          Int
+  billable     Boolean   @default(true)
+  startDate    DateTime  @map("start_date") @db.Date
+  endDate      DateTime  @map("end_date") @db.Date
+  releasedAt   DateTime? @map("released_at") @db.Date
+  createdBy    String?   @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  person     Person      @relation(fields: [personId], references: [id])
+  project    Project     @relation(fields: [projectId], references: [id])
+  demandLine DemandLine? @relation(fields: [demandLineId], references: [id])
+  release    Release?
+
+  @@index([personId, startDate, endDate])
+  @@index([projectId])
+  @@index([demandLineId])
+  @@map("allocations")
+}
+
+model Lock {
+  id            String    @id @default(uuid()) @db.Uuid
+  personId      String    @map("person_id") @db.Uuid
+  projectId     String    @map("project_id") @db.Uuid
+  type          LockType
+  pct           Int?
+  startDate     DateTime  @map("start_date") @db.Date
+  expiresOn     DateTime  @map("expires_on") @db.Date
+  createdBy     String?   @map("created_by") @db.Uuid
+  promotedAt    DateTime? @map("promoted_at") @db.Timestamptz()
+  releasedAt    DateTime? @map("released_at") @db.Timestamptz()
+  releaseReason String?   @map("release_reason")
+
+  person  Person  @relation(fields: [personId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([personId])
+  @@index([projectId])
+  @@index([expiresOn])
+  @@map("locks")
+}
+
+model Release {
+  id                String      @id @default(uuid()) @db.Uuid
+  allocationId      String      @unique @map("allocation_id") @db.Uuid
+  type              ReleaseType
+  effectiveDate     DateTime    @map("effective_date") @db.Date
+  reason            String
+  knowledgeTransfer Boolean     @default(false) @map("knowledge_transfer")
+  incomingPersonId  String?     @map("incoming_person_id") @db.Uuid
+  ktStart           DateTime?   @map("kt_start") @db.Date
+  ktEnd             DateTime?   @map("kt_end") @db.Date
+  createdBy         String?     @map("created_by") @db.Uuid
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+
+  allocation     Allocation @relation(fields: [allocationId], references: [id])
+  incomingPerson Person?    @relation("IncomingPerson", fields: [incomingPersonId], references: [id])
+
+  @@map("releases")
+}
+
+model LeaveRequest {
+  id        String      @id @default(uuid()) @db.Uuid
+  personId  String      @map("person_id") @db.Uuid
+  type      LeaveType
+  fromDate  DateTime    @map("from_date") @db.Date
+  toDate    DateTime    @map("to_date") @db.Date
+  status    LeaveStatus @default(PENDING)
+  decidedBy String?     @map("decided_by") @db.Uuid
+
+  person  Person  @relation("LeaveOwner", fields: [personId], references: [id])
+  decider Person? @relation("LeaveDecider", fields: [decidedBy], references: [id])
+
+  @@index([personId, fromDate, toDate])
+  @@map("leave_requests")
+}
+
+model Holiday {
+  id     String   @id @default(uuid()) @db.Uuid
+  date   DateTime @db.Date
+  name   String
+  // 'India', 'South Korea', 'Europe', 'Japan' or 'All regions'
+  region String
+
+  @@unique([date, region])
+  @@map("holidays")
+}
+
+model NotificationRule {
+  id          String                @id @default(uuid()) @db.Uuid
+  event       String                @unique
+  triggerDesc String                @map("trigger_desc")
+  audience    String[]
+  enabled     Boolean               @default(true)
+  channel     NotificationChannel
+  frequency   NotificationFrequency
+
+  @@map("notification_rules")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  kind      String
+  title     String
+  detail    String?
+  link      String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  readAt    DateTime? @map("read_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model SavedReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  // Null for system-provided reports.
+  ownerId    String?  @map("owner_id") @db.Uuid
+  name       String
+  type       String
+  scope      Json
+  schedule   String?
+  recipients String[]
+
+  owner User? @relation(fields: [ownerId], references: [id])
+
+  @@map("saved_reports")
+}
+
+model Setting {
+  key   String @id
+  value Json
+
+  @@map("settings")
+}
+
+// Append-only: the app never updates or deletes rows.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  before     Json?
+  after      Json?
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}

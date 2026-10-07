@@ -5,7 +5,8 @@ WORKDIR /repo
 
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/api/package.json apps/api/
+COPY apps/api/package.json apps/api/prisma.config.ts apps/api/
+COPY apps/api/prisma/schema.prisma apps/api/prisma/
 COPY packages/shared/package.json packages/shared/
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile --filter api...
 
@@ -13,12 +14,13 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --froze
 FROM deps AS dev
 ENV NODE_ENV=development
 EXPOSE 3001
-CMD ["pnpm", "--filter", "api", "start:dev"]
+# The source bind mount hides the generated client, so regenerate on start.
+CMD ["sh", "-c", "pnpm --filter api prisma generate && pnpm --filter api start:dev"]
 
 FROM deps AS build
 COPY packages/shared packages/shared
 COPY apps/api apps/api
-RUN pnpm --filter api build && pnpm --filter api deploy --prod /out
+RUN pnpm --filter api prisma generate && pnpm --filter api build && pnpm --filter api deploy --prod --ignore-scripts /out
 
 FROM node:24-alpine AS prod
 ENV NODE_ENV=production PORT=3001
