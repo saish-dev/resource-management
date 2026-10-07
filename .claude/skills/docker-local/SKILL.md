@@ -8,6 +8,7 @@ description: Set up or change the local Docker environment - Dockerfiles for app
 Decision: the app and its database run locally through Docker Compose. `docker-compose.yml` (repo root) already provides `db` (Postgres 16) and `redis` with healthchecks. Env comes from `.env` (copy of `.env.example`, git-ignored).
 
 ## Adding the app containers (needs apps/api and apps/web to exist)
+
 1. `apps/api/Dockerfile`: multi-stage on `node:<lts>-alpine` with pnpm (corepack). Stages: `deps` (install with the pnpm lockfile, workspace-filtered) -> `dev` (source bind-mounted, `pnpm --filter api start:dev`) -> `build` -> `prod` (non-root user, only dist + prod deps, `prisma generate` done).
 2. `apps/web/Dockerfile`: same pattern; `prod` uses Next.js `output: 'standalone'`.
 3. Build context is the repo root (monorepo needs `packages/shared`); add a root `.dockerignore` (node_modules, .git, .next, dist, .env*, the prototype HTML).
@@ -20,6 +21,7 @@ Decision: the app and its database run locally through Docker Compose. `docker-c
 7. Update the Commands block in `CLAUDE.md`, plus `docs/TECH_STACK.md` and `docs/SYSTEM_ARCHITECTURE.md` if topology changes.
 
 ## Verify
+
 - `docker compose config -q` passes.
 - `docker compose up -d --build` then check `docker compose ps` is healthy, API health endpoint responds, web loads and calls the API.
 - `docker compose down` keeps data; `down -v` wipes the database (confirm with the user before running).
