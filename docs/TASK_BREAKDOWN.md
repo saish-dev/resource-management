@@ -16,7 +16,7 @@ Status legend: [ ] todo · [~] in progress · [x] done
 - [x] Dockerfiles + `api`/`web` compose services (dev and prod images verified; `migrate` service added with Prisma)
 - [~] CI (lint, typecheck, test, build, migrations, docker): workflow written, not yet run on GitHub
 - [x] Prisma setup, first migration, seed from prototype data
-- [ ] Port design tokens (light/dark) and base components (Button, Lozenge, Card, Table, Modal, Toast, Tag, Progress bar)
+- [x] Port design tokens (light/dark) and base components (Button, Lozenge, Card, Table, Modal, Toast, Tag, Progress bar); dev gallery at `/design`
 - [ ] Confirm open decisions: ORM, auth/IdP, hosting, UI library
 
 ## Phase 1 — Core domain (MVP)
