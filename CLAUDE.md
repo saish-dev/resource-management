@@ -68,4 +68,6 @@ pnpm --filter api prisma migrate dev
 
 ## Git
 
-- Branch off `main`; Conventional Commits; commit/push only when asked.
+- Branch off `main`; Conventional Commits (enforced by commitlint).
+- Commit automatically when a task or logical unit is done and checks pass; don't ask. Never commit to `main` directly, on a feature branch only.
+- Merging to `main`, pushing, opening PRs and force operations still need the user's request.
