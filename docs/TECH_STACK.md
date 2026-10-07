@@ -37,7 +37,7 @@ Decided: **Next.js** frontend, **NestJS** backend. Items marked _(proposed)_ are
 - ESLint + Prettier, Husky + lint-staged, Conventional Commits.
 - **Docker + Docker Compose for local development (decided):** `docker-compose.yml` runs Postgres 16 and Redis now; Dockerfiles and `api`/`web` services are added when the apps are scaffolded (`/docker-local`). Multi-stage Dockerfiles (dev + prod targets). `.env` git-ignored, `.env.example` committed.
 - CI: GitHub Actions — lint, typecheck, test, build.
-- Hosting: TBD (containers for API; Vercel or container for web).
+- Hosting: local only for now (Docker Compose). Production hosting is deferred until the app is ready to deploy; the prod Dockerfiles keep that option open.
 
 ## Prototype reference
 

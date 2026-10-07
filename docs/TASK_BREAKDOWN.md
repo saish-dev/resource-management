@@ -17,7 +17,7 @@ Status legend: [ ] todo · [~] in progress · [x] done
 - [~] CI (lint, typecheck, test, build, migrations, docker): workflow written, not yet run on GitHub
 - [x] Prisma setup, first migration, seed from prototype data
 - [x] Port design tokens (light/dark) and base components (Button, Lozenge, Card, Table, Modal, Toast, Tag, Progress bar); dev gallery at `/design`
-- [~] Confirm open decisions: ORM (Prisma, confirmed), auth/IdP (Microsoft + Google OIDC, confirmed), UI library (Tailwind + native elements, in use); **hosting still open, needs a decision**
+- [x] Confirm open decisions: ORM (Prisma), auth/IdP (Microsoft + Google OIDC), UI library (Tailwind + native elements), hosting (local only via Docker Compose for now; production hosting deferred)
 
 ## Phase 1 — Core domain (MVP)
 
