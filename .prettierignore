@@ -1,0 +1,7 @@
+node_modules
+dist
+.next
+coverage
+pnpm-lock.yaml
+resource_management_v2.html
+apps/web/AGENTS.md
