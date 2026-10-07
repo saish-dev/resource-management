@@ -63,7 +63,8 @@ docker compose down -v               # stop and WIPE database (ask first)
 pnpm install
 pnpm dev            # web + api on the host (needs db/redis from compose)
 pnpm lint && pnpm typecheck && pnpm test
-pnpm --filter api prisma migrate dev
+pnpm --filter api db:migrate        # prisma migrate dev
+pnpm --filter api db:seed           # dev seed (prototype data)
 ```
 
 ## Git

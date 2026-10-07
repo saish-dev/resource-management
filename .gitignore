@@ -32,3 +32,6 @@ dist
 *.tsbuildinfo
 coverage
 .DS_Store
+
+# Generated Prisma client
+apps/api/src/generated
