@@ -5,7 +5,7 @@ description: Create a branch, open a pull request, read PR review comments and a
 
 # Git and PR workflow
 
-Rules from CLAUDE.md apply: branch off `main`, Conventional Commits, **commit and push only when the user asks**, never stage `.env*` or secrets. Opening a PR, pushing, replying to or resolving review threads are outward-facing: confirm first unless the user already asked for that step.
+Rules from CLAUDE.md apply: branch off `main`, Conventional Commits, **commit automatically when work is done and checks pass (no need to ask); push, merge and open PRs only when the user asks**, never stage `.env*` or secrets. Opening a PR, pushing, replying to or resolving review threads are outward-facing: confirm first unless the user already asked for that step.
 
 Pick the mode that matches the request.
 
@@ -20,7 +20,7 @@ Pick the mode that matches the request.
 
 1. Run `/pre-commit-check`. Do not open a PR with failures unless the user says so; if they do, state the failures in the PR body.
 2. Review `git diff main...HEAD --stat` and the log. Keep the PR scoped to one task; flag unrelated changes.
-3. If committing is requested: stage files by name (no `git add -A`), commit with a Conventional Commit message, ending with the attribution trailer from the session context.
+3. Commit without asking: stage files by name (no `git add -A`), commit with a Conventional Commit message, ending with the attribution trailer from the session context.
 4. With the user's go-ahead: `git push -u origin HEAD`, then
    ```
    gh pr create --base main --title "<conventional title>" --body-file <scratchpad file>
@@ -46,7 +46,7 @@ Group the feedback into: blocking (changes requested, failing checks), suggestio
 2. Work through the list one item at a time. For each: make the smallest change that satisfies it; if you disagree or the ask conflicts with `PRODUCT_REQUIREMENTS.md` (business rules live in the API only), do not silently comply or ignore. Explain and let the user decide.
 3. If a fix changes behaviour, update the relevant doc in the same change and add or adjust tests.
 4. Run `/pre-commit-check`.
-5. One commit per logical fix (`fix: ...` or `refactor: ...`), no force-push or history rewrite unless asked. Push only on request.
+5. One commit per logical fix (`fix: ...` or `refactor: ...`), no force-push or history rewrite unless asked. Commit automatically; push only on request.
 6. With approval, reply on each thread saying what changed (commit sha) or why not. Do not resolve threads on the reviewer's behalf; leave resolving to them unless the user says otherwise. Re-request review with `gh pr edit <n> --add-reviewer <login>` if asked.
 7. Summarise: addressed, declined with reason, still open.
 

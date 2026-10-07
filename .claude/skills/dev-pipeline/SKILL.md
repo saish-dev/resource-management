@@ -7,7 +7,7 @@ description: Orchestrator that runs the full development pipeline for a task - p
 
 Argument: a feature/screen, or empty to take the first unchecked item under "Next up" in `docs/TASK_BREAKDOWN.md`.
 
-Run the stages in order. Skip a stage only if clearly not applicable, and say which and why. Stop and ask the user at the marked gates. Don't commit or push unless asked.
+Run the stages in order. Skip a stage only if clearly not applicable, and say which and why. Stop and ask the user at the marked gates. Commit automatically on a feature branch when checks pass (no need to ask); don't merge to `main` or push unless asked.
 
 ## 0. Intake
 
@@ -60,7 +60,7 @@ Run the stages in order. Skip a stage only if clearly not applicable, and say wh
 
 - `/docs-sync`: update docs and tick `TASK_BREAKDOWN.md`.
 - Summarise: what was built, tests run and results, deviations from docs/prototype, open questions, suggested next task.
-- Offer to commit (Conventional Commits). Wait for the user's yes.
+- Commit (Conventional Commits, one commit per logical unit, formatting-only changes in their own `style:` commit) on the feature branch. Don't wait for approval. Offer to merge/push afterwards.
 
 ## Rules for the orchestrator
 
