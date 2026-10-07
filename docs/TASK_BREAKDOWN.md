@@ -13,7 +13,7 @@ Status legend: [ ] todo · [~] in progress · [x] done
 - [x] pnpm monorepo: `apps/web` (Next.js), `apps/api` (NestJS), `packages/shared`
 - [x] ESLint/Prettier/TS strict, Husky, commit lint
 - [x] Docker Compose infra (Postgres, Redis) and `.env.example`
-- [~] Dockerfiles + `api`/`web` compose services (written; image build not yet verified, `migrate` service waits for Prisma)
+- [x] Dockerfiles + `api`/`web` compose services (dev and prod images verified; `migrate` service added with Prisma)
 - [ ] CI (lint, typecheck, test, build)
 - [ ] Prisma setup, first migration, seed from prototype data
 - [ ] Port design tokens (light/dark) and base components (Button, Lozenge, Card, Table, Modal, Toast, Tag, Progress bar)

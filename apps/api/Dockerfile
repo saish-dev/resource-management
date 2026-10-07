@@ -21,7 +21,7 @@ COPY apps/api apps/api
 RUN pnpm --filter api build && pnpm --filter api deploy --prod /out
 
 FROM node:24-alpine AS prod
-ENV NODE_ENV=production
+ENV NODE_ENV=production PORT=3001
 WORKDIR /app
 COPY --from=build --chown=node:node /out/node_modules ./node_modules
 COPY --from=build --chown=node:node /repo/apps/api/dist ./dist
